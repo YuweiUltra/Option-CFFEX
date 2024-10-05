@@ -121,5 +121,9 @@ combined_data = combined_data.dropna(axis=0)
 # Pass the final dataframe
 combined_data_futures = combined_data[combined_data['type'] == AssetTypes.Future.value]
 combined_data_options = combined_data[combined_data['type'] == AssetTypes.Option.value]
+combined_data_options['strike_price'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[-1]).astype(int)
+combined_data_options['option_type'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[1]).astype(str)
+combined_data_options['underlying_id'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[0]).astype(str)
+
 combined_data_futures.to_csv('CleanedData_futures.csv')
 combined_data_options.to_csv('CleanedData_options.csv')
