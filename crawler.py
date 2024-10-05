@@ -3,13 +3,15 @@ from playwright.sync_api import Playwright, sync_playwright, expect
 import os
 import zipfile
 
+download_path = "downloads"
+
 
 def run(playwright: Playwright) -> None:
-    download_path = "downloads"  # Specify your download directory here
+    # Specify your download directory here
     if not os.path.exists(download_path):
         os.makedirs(download_path)
 
-    browser = playwright.chromium.launch(headless=False)
+    browser = playwright.chromium.launch(headless=True)
     context = browser.new_context(
         accept_downloads=True  # Enable download handling
     )
@@ -27,7 +29,7 @@ def run(playwright: Playwright) -> None:
 
     # Iterate through each link to trigger the downloads
     count = download_links.count()
-    for i in range(count):
+    for i in range(count-1): # the last month data is lost
         with page.expect_download() as download_info:
             download_links.nth(i).click()
         download = download_info.value
@@ -48,3 +50,7 @@ def run(playwright: Playwright) -> None:
 
 with sync_playwright() as playwright:
     run(playwright)
+
+for filename in os.listdir(download_path):
+    new_filename = filename.replace("_1", "")
+    os.rename(os.path.join(download_path, filename), os.path.join(download_path, new_filename))
