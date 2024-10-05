@@ -46,15 +46,11 @@ class ExchangeSimulator(ABC):
         self._current_idx = value
 
     @abstractmethod
-    def ingest_assets_info(self, data: pd.DataFrame):
+    def ingest(self, data: pd.DataFrame):
         pass
 
     @abstractmethod
-    def ingest_assets_price_data(self, data: pd.DataFrame):
-        pass
-
-    @abstractmethod
-    def request(self, curr_trading_time, method):
+    def request_data(self, curr_trading_time, method):
         pass
 
     def __iter__(self):
@@ -93,12 +89,10 @@ class Base_Exchange(ExchangeSimulator):
         if missing_cols:
             raise ValueError(f"Missing required columns: {missing_cols}")
 
-        if not (data['type'] == self.exchange_type).all():
+        if not (data['type'] == self.exchange_type.value).all():
             raise ValueError("Data type mismatch")
         if not (data['exchange'] == self.exchange_symbol).all():
             raise ValueError("Exchange symbol mismatch")
-        if not data['uni_id'].is_unique:
-            raise ValueError("Duplicate uni_id entries found")
 
         data['date'] = pd.to_datetime(data['date'])
         data['listed_date'] = pd.to_datetime(data['listed_date'])
@@ -110,6 +104,9 @@ class Base_Exchange(ExchangeSimulator):
             (filtered_data['listed_date'] <= self.curr_trading_time) &
             (filtered_data['de_listed_date'] > self.curr_trading_time)
             ]
+
+        if not filtered_data['uni_id'].is_unique:
+            raise ValueError("Duplicate uni_id entries found")
 
         if not filtered_data.empty:
             self._curr_info_df = filtered_data[['uni_id', 'exchange', 'type', 'listed_date', 'de_listed_date']]

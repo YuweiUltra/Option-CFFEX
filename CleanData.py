@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 import warnings
+from enums import AssetTypes
+import numpy as np
 
 warnings.filterwarnings("ignore")
 
@@ -45,7 +47,7 @@ def add_listed_and_delisted_dates(df):
     listed_dates.columns = ['合约代码', 'listed_date']
 
     delisted_dates = df.groupby('合约代码')['date'].last().reset_index()
-    delisted_dates.columns = ['合约代码', 'delisted_date']
+    delisted_dates.columns = ['合约代码', 'de_listed_date']
 
     # Merge the listed and delisted dates back to the original dataframe
     df = pd.merge(df, listed_dates, on='合约代码', how='left')
@@ -86,7 +88,7 @@ combined_data = pd.merge(
 
 # Replace the listed_date and delisted_date with 上市日 and 最后交易日 from info, if available
 combined_data['listed_date'] = combined_data['上市日'].combine_first(combined_data['listed_date'])
-combined_data['delisted_date'] = combined_data['最后交易日'].combine_first(combined_data['delisted_date'])
+combined_data['de_listed_date'] = combined_data['最后交易日'].combine_first(combined_data['de_listed_date'])
 
 # Drop the columns from info that were used for merging
 combined_data = combined_data.drop(columns=['上市日', '最后交易日'])
@@ -103,13 +105,21 @@ column_mapping = {
 
 combined_data = combined_data.rename(columns=column_mapping)
 combined_data['exchange'] = 'ZJS'
+combined_data['type'] = np.where(
+    combined_data['uni_id'].str.contains('-C-|-P-'),  # Check if 'uni_id' contains '-C-' or '-P-'
+    AssetTypes.Option.value,  # Assign 'Option' if true
+    AssetTypes.Future.value  # Assign 'Future' otherwise
+)
 combined_data = combined_data[
-    ['uni_id', 'date', 'exchange', 'open', 'high', 'low', 'close', 'close_adj', 'volume', 'listed_date',
-     'delisted_date']]
+    ['uni_id', 'date', 'exchange', 'type', 'open', 'high', 'low', 'close', 'close_adj', 'volume', 'listed_date',
+     'de_listed_date']]
 combined_data = combined_data.dropna(axis=0)
 
 # combined_data = combined_data.set_index(['date', '合约代码'])
 # combined_data = combined_data.sort_index(level=1).sort_index(level=0)
 
 # Pass the final dataframe
-combined_data.to_csv('CleanedData.csv')
+combined_data_futures = combined_data[combined_data['type'] == AssetTypes.Future.value]
+combined_data_options = combined_data[combined_data['type'] == AssetTypes.Option.value]
+combined_data_futures.to_csv('CleanedData_futures.csv')
+combined_data_options.to_csv('CleanedData_options.csv')
