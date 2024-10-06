@@ -124,6 +124,21 @@ combined_data_options = combined_data[combined_data['type'] == AssetTypes.Option
 combined_data_options['strike_price'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[-1]).astype(int)
 combined_data_options['option_type'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[1]).astype(str)
 combined_data_options['underlying_id'] = combined_data_options['uni_id'].apply(lambda x: x.split('-')[0]).astype(str)
+replace_map = {'HO': 'IH', 'IO': 'IF', 'MO': 'IM'}
+
+
+def replace_prefix(underlying_id):
+    prefix = underlying_id[:2]  # Extract the first two characters
+    if prefix in replace_map:
+        return replace_map[prefix] + underlying_id[2:]  # Replace the prefix and append the rest
+    return underlying_id
+
+
+combined_data_options['underlying_id'] = combined_data_options['underlying_id'].apply(replace_prefix)
+
+for col in ['date', 'listed_date', 'de_listed_date']:
+    combined_data_futures[col] = pd.to_datetime(combined_data_futures[col])
+    combined_data_options[col] = pd.to_datetime(combined_data_options[col])
 
 combined_data_futures.to_csv('CleanedData_futures.csv')
 combined_data_options.to_csv('CleanedData_options.csv')
