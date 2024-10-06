@@ -62,6 +62,7 @@ class Base_Strategy:
             print(f"PROCESSING DATE:  {self.exchange.curr_trading_time}")
             print(f"PORTFOLIO CASH {self.broker.cash}")
             print(f"PORTFOLIO VALUE {self.broker.portfolio_value}")
+            print(f"PORTFOLIO positions {self.broker.positions}")
 
         print("Trading simulation complete.")
 

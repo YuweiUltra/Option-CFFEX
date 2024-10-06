@@ -109,9 +109,10 @@ class Base_Exchange(ExchangeSimulator):
             raise ValueError("Duplicate uni_id entries found")
 
         if not filtered_data.empty:
-            self._curr_info_df = filtered_data[['uni_id', 'exchange', 'type', 'listed_date', 'de_listed_date']]
+            self._curr_info_df = filtered_data[
+                ['uni_id', 'exchange', 'type', 'listed_date', 'de_listed_date']].set_index('uni_id')
             self._curr_price_df = filtered_data.drop(
-                columns=['date', 'exchange', 'type', 'listed_date', 'de_listed_date'])
+                columns=['date', 'exchange', 'type', 'listed_date', 'de_listed_date']).set_index('uni_id')
             self._backtest_activate_info = True
             self._backtest_activate_data = True
 
