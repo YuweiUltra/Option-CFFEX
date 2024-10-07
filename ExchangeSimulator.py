@@ -112,7 +112,7 @@ class Base_Exchange(ExchangeSimulator):
             self._curr_info_df = filtered_data[
                 ['uni_id', 'exchange', 'type', 'listed_date', 'de_listed_date']].set_index('uni_id')
             self._curr_price_df = filtered_data.drop(
-                columns=['date', 'exchange', 'type', 'listed_date', 'de_listed_date']).set_index('uni_id')
+                columns=['date', 'exchange', 'type']).set_index('uni_id')
             self._backtest_activate_info = True
             self._backtest_activate_data = True
 

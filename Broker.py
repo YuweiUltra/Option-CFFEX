@@ -27,8 +27,6 @@ class Broker(ABC):
 
     @cash.setter
     def cash(self, value: float) -> None:
-        if value < 0:
-            raise ValueError("Cash cannot be negative.")
         self._cash = value
 
     @property
@@ -37,8 +35,6 @@ class Broker(ABC):
 
     @portfolio_value.setter
     def portfolio_value(self, value: float) -> None:
-        if value < 0:
-            raise ValueError("Portfolio value cannot be negative.")
         self._portfolio_value = value
 
     @property
@@ -84,11 +80,11 @@ class Base_Broker(Broker):
     def premium_value(self, value: float) -> None:
         self._premium_value = value
 
-    def buy_option(self, option_id: str, price: float, quantity: int, de_listed_date, entry_price) -> None:
+    def buy_option(self, option_id: str, quantity: int) -> None:
         # Implement logic for buying options
         pass
 
-    def sell_option(self, option_id: str, price: float, quantity: int, de_listed_date, entry_price) -> None:
+    def sell_option(self, option_id: str, quantity: int) -> None:
         # Implement logic for selling options
         pass
 
