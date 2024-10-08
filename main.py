@@ -96,15 +96,21 @@ class Broker(Base_Broker):
 
     def buy_option(self, option_id, quantity):
         try:
-            price = self.exchange.curr_price_df.loc[option_id, 'close']
-            strike = self.exchange.curr_price_df.loc[option_id, 'strike_price']
-            de_listed_date = self.exchange.curr_price_df.loc[option_id, 'de_listed_date']
-            entry_price = self.exchange.curr_price_df.loc[option_id, 'close_underlying']
+            try:
+                price = self.exchange.curr_price_df.loc[option_id, 'close']
+                strike = self.exchange.curr_price_df.loc[option_id, 'strike_price']
+                de_listed_date = self.exchange.curr_price_df.loc[option_id, 'de_listed_date']
+                entry_price = self.exchange.curr_price_df.loc[option_id, 'close_underlying']
+            except:
+                price = self.exchange.pre_price_data.loc[option_id, 'close']
+                strike = self.exchange.pre_price_data.loc[option_id, 'strike_price']
+                de_listed_date = self.exchange.pre_price_data.loc[option_id, 'de_listed_date']
+                entry_price = self.exchange.pre_price_data.loc[option_id, 'close_underlying']
         except:
-            price = self.exchange.pre_price_data.loc[option_id, 'close']
-            strike = self.exchange.pre_price_data.loc[option_id, 'strike_price']
-            de_listed_date = self.exchange.pre_price_data.loc[option_id, 'de_listed_date']
-            entry_price = self.exchange.pre_price_data.loc[option_id, 'close_underlying']
+            price = self.positions[option_id]['avg_price']
+            strike = int(option_id.split('-')[-1])
+            de_listed_date = 0
+            entry_price = 0
 
         total_cost = price * quantity * 100
         commission = strike * quantity * 0.00
@@ -147,15 +153,21 @@ class Broker(Base_Broker):
 
     def sell_option(self, option_id, quantity):
         try:
-            price = self.exchange.curr_price_df.loc[option_id, 'close']
-            strike = self.exchange.curr_price_df.loc[option_id, 'strike_price']
-            de_listed_date = self.exchange.curr_price_df.loc[option_id, 'de_listed_date']
-            entry_price = self.exchange.curr_price_df.loc[option_id, 'close_underlying']
+            try:
+                price = self.exchange.curr_price_df.loc[option_id, 'close']
+                strike = self.exchange.curr_price_df.loc[option_id, 'strike_price']
+                de_listed_date = self.exchange.curr_price_df.loc[option_id, 'de_listed_date']
+                entry_price = self.exchange.curr_price_df.loc[option_id, 'close_underlying']
+            except:
+                price = self.exchange.pre_price_data.loc[option_id, 'close']
+                strike = self.exchange.pre_price_data.loc[option_id, 'strike_price']
+                de_listed_date = self.exchange.pre_price_data.loc[option_id, 'de_listed_date']
+                entry_price = self.exchange.pre_price_data.loc[option_id, 'close_underlying']
         except:
-            price = self.exchange.pre_price_data.loc[option_id, 'close']
-            strike = self.exchange.pre_price_data.loc[option_id, 'strike_price']
-            de_listed_date = self.exchange.pre_price_data.loc[option_id, 'de_listed_date']
-            entry_price = self.exchange.pre_price_data.loc[option_id, 'close_underlying']
+            price = self.positions[option_id]['avg_price']
+            strike = int(option_id.split('-')[-1])
+            de_listed_date = 0
+            entry_price = 0
 
         total_revenue = price * quantity * 100  # Contract size is 100 units per option
         commission = strike * quantity * 0.00  # 0.3% transaction fee
@@ -204,8 +216,12 @@ class Broker(Base_Broker):
         nominal_value = 0  # Represents the notional value of the underlying assets
 
         for option_id, position in self.positions.items():
-            market_price = self.exchange.curr_price_df.loc[option_id]['close']
-            strike_price = self.exchange.curr_price_df.loc[option_id]['strike_price']
+            try:
+                market_price = self.exchange.curr_price_df.loc[option_id]['close']
+                strike_price = self.exchange.curr_price_df.loc[option_id]['strike_price']
+            except:
+                market_price = self.positions[option_id]['avg_price']
+                strike_price = int(option_id.split('-')[-1])
             # TODO: 名义本金和权利金计算
 
             if position['shares'] > 0:  # Long position
@@ -222,9 +238,12 @@ class Broker(Base_Broker):
         self.nominal_value = nominal_value
 
 
-buy=2
-sell=0
-#TODO: like this buy sell 档, create 远近月份档
+buy = 0
+sell = 2
+buy_far = 0
+
+
+# TODO: like this buy sell 档, create 远近月份档
 
 class Strategy(Base_Strategy):
     def __init__(self, broker, exchange):
@@ -233,9 +252,10 @@ class Strategy(Base_Strategy):
         self.__results = []
         self.__last_portfolio_value = broker.portfolio_value
 
-    def execute_trade(self, sell_contract_id, buy_contract_id):
-        self.broker.sell_option(sell_contract_id, 1)
-        self.broker.buy_option(buy_contract_id, 2)
+    def execute_trade(self, sell_contract_id, buy_contract_id, buy_contract_id_far):
+        # self.broker.buy_option(buy_contract_id_far, 1)
+        self.broker.buy_option(sell_contract_id, 1)
+        self.broker.sell_option(buy_contract_id, 2)
 
     def __next__(self):
         trading_date, market_info, price_data, sell_contracts, buy_contracts = next(self.exchange)
@@ -248,7 +268,8 @@ class Strategy(Base_Strategy):
             if not sell_contracts.empty and not buy_contracts.empty:
                 sell_contract_id = sell_contracts.index[sell]
                 buy_contract_id = buy_contracts.index[buy]
-                self.execute_trade(sell_contract_id, buy_contract_id)
+                buy_contract_id_far = sell_contracts.index[buy_far]
+                self.execute_trade(sell_contract_id, buy_contract_id, buy_contract_id_far)
 
         else:
             if not sell_contracts.empty and not buy_contracts.empty:
@@ -273,23 +294,32 @@ class Strategy(Base_Strategy):
                             buy_contract_id = \
                                 buy_contracts[buy_contracts['underlying_id'] == underlying_ids[1]].index[
                                     buy]
+                            buy_contract_id_far = \
+                                sell_contracts[sell_contracts['underlying_id'] == underlying_ids[1]].index[buy_far]
                         except:
                             sell_contract_id = \
                                 sell_contracts[sell_contracts['underlying_id'] == underlying_ids[0]].index[sell]
                             buy_contract_id = \
                                 buy_contracts[buy_contracts['underlying_id'] == underlying_ids[0]].index[
                                     buy]
-                        self.execute_trade(sell_contract_id, buy_contract_id)
+                            buy_contract_id_far = \
+                                sell_contracts[sell_contracts['underlying_id'] == underlying_ids[0]].index[buy_far]
+
+                        self.execute_trade(sell_contract_id, buy_contract_id, buy_contract_id_far)
                         break
 
-                    elif (atm_strike - position['entry_price']) / position['entry_price'] >= 0.05:
-                        event = '上涨超过百分之五'
-                        self.broker.close_all_positions()
-                        if not sell_contracts.empty and not buy_contracts.empty:
-                            sell_contract_id = sell_contracts.index[sell]
-                            buy_contract_id = buy_contracts.index[buy]
-                            self.execute_trade(sell_contract_id, buy_contract_id)
-                        break
+                    # elif (atm_strike - position['entry_price']) / position['entry_price'] >= 0.05:
+                    #     event = '上涨超过百分之五'
+                    #     self.broker.close_all_positions()
+                    #     if not sell_contracts.empty and not buy_contracts.empty:
+                    #         sell_contract_id = sell_contracts.index[sell]
+                    #         buy_contract_id = buy_contracts.index[buy]
+                    #         try:
+                    #             buy_contract_id_far = sell_contracts.index[buy_far]
+                    #         except:
+                    #             buy_contract_id_far = sell_contracts.index[]
+                    #         self.execute_trade(sell_contract_id, buy_contract_id, buy_contract_id_far)
+                    #     break
 
         ############################ after trading ############################
         self.exchange.pre_price_data = price_data
@@ -298,7 +328,7 @@ class Strategy(Base_Strategy):
         try:
             daily_return = (portfolio_value - self.__last_portfolio_value) / self.broker.nominal_value
         except:
-            daily_return=0
+            daily_return = 0
         self.__last_portfolio_value = portfolio_value
 
         # Log transactions for the current trading day
@@ -344,7 +374,7 @@ future_data = pd.read_csv('CleanedData_futures.csv', index_col=0)
 trading_calender = option_data['date'].unique()
 trading_calender.sort()
 
-start_date = '2020-01-01'
+start_date = '2022-09-01'
 end_date = '2024-09-30'
 ZJS_Exchange = Exchange('ZJS', trading_calender, ExchangeTypes.Option, start_date, end_date,
                         future_data.set_index(['date', 'uni_id']),
@@ -436,6 +466,14 @@ def plot_all(results_df):
         y=results_df['portfolio_value'],
         mode='lines',
         name='Portfolio Value',
+        showlegend=True  # Show legend for portfolio value
+    ), row=1, col=2)
+
+    fig.add_trace(go.Scatter(
+        x=results_df.index,
+        y=results_df['cash'],
+        mode='lines',
+        name='cash',
         showlegend=True  # Show legend for portfolio value
     ), row=1, col=2)
 
