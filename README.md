@@ -1,10 +1,10 @@
 # China Financial Future Exchange
-What products does the CFFE provide?
+What products does the CFFEX provide?
 
 - Futures: IH, IF, IC, IM
 - Options: HO, IO, MO
 
-This repo is used to scralwer option data from the CFFE web and backtest some simple option strategy 
+This repo is used to crawl option data from the CFFEX web and backtest some simple option strategies.
 
 
 For example:
